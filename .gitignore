@@ -1,2 +1,8 @@
 *.class
 *.log
+offtopic
+target
+in
+out
+project
+.idea
