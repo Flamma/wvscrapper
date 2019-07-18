@@ -6,10 +6,12 @@ import org.htmlcleaner.conditional.ITagNodeCondition
 import org.htmlcleaner.{CommentNode, ContentNode, TagNode}
 
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 
 class TagNodeExtend(self: TagNode) {
     def innerHtml: String = privInnerHtml(self, false)
-    def findAllByAtt(name:String, value: String): List[TagNode] = privFindAllByAtt(self, name, value)
+    def findAllByAtt(name:String, pattern: Regex): List[TagNode] = privFindAllByAtt(self, name, pattern)
+    def findAllByAtt(name:String, value: String): List[TagNode] = privFindAllByAtt(self, name, value.r)
 
     private def privInnerHtml(node: TagNode, printOuter: Boolean = true): String = {
 
@@ -36,10 +38,10 @@ class TagNodeExtend(self: TagNode) {
         case (acc: String, (name: String, value: String)) => acc + s""" $name = "$value""""
     }
 
-    private def privFindAllByAtt(node: TagNode, name: String, value: String): List[TagNode] = {
-        node.getAttributes.asScala.get(name).filter(_ == value).fold(List.empty[TagNode])(_ => List(node)) ++
+    private def privFindAllByAtt(node: TagNode, name: String, pattern: Regex): List[TagNode] = {
+        node.getAttributes.asScala.get(name).filter(pattern.findFirstIn(_).isDefined).fold(List.empty[TagNode])(_ => List(node)) ++
         node.getAllChildren.asScala.toList.flatMap {
-            case child: TagNode => privFindAllByAtt(child, name, value)
+            case child: TagNode => privFindAllByAtt(child, name, pattern)
             case _ => List.empty[TagNode]
         }
     }

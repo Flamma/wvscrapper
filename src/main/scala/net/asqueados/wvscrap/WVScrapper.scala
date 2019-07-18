@@ -19,6 +19,8 @@ object JSoupPageDownloader extends PageDownloader {
 }
 
 class HtmlCleanerPageScrapper(downloader: PageDownloader) extends PageScrapper {
+    private val MsgIdPattern = "e_msg_[0-9]*".r
+
     import TagNodeExtend.tagNodeWrapper
 
     override def getPosts(url: String): List[Post] = {
@@ -27,12 +29,13 @@ class HtmlCleanerPageScrapper(downloader: PageDownloader) extends PageScrapper {
         val rootNode = cleaner.clean(html)
 
         val divs = getPostsDivs(rootNode)
+        val msgDivs = divs.flatMap(getMsgDivs)
         val postIds = divs.map(node => node.getAttributeByName("id"))
         val userNames = divs.map(getUserNameFromPostDiv)
-        val tuples = postIds zip divs zip userNames
+        val tuples = msgDivs zip userNames
 
         tuples.map {
-            case ((postId: String, div: TagNode), userName: String) => Post(userName, div.innerHtml)
+            case (div: TagNode, userName: String) => Post(userName, div.innerHtml)
         }
 
     }
@@ -43,4 +46,8 @@ class HtmlCleanerPageScrapper(downloader: PageDownloader) extends PageScrapper {
         val postRow = postDiv.getParent.getParent
         postRow.findElementByName("a", true).getText.toString
     }
+
+    private def getMsgDivs(node: TagNode) = node.findAllByAtt("id", MsgIdPattern)
+
+
 }
