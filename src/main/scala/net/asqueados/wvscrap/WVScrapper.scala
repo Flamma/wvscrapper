@@ -3,6 +3,8 @@ package net.asqueados.wvscrap
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import org.htmlcleaner.{HtmlCleaner, TagNode}
 
+import scala.util.Try
+
 trait PageBrowser {
     def getPosts(url: String): List[Post]
     def getNextPageUrl(html: String): Option[String]
@@ -13,10 +15,22 @@ trait PageDownloader {
 }
 
 object JSoupPageDownloader extends PageDownloader {
+    private val retries = 10
+    private val timeToRetry = 1000
+
     val userAgent = "Mozilla/5.0"
     val browser = new JsoupBrowser(userAgent = userAgent)
 
-    override def getHtml(url: String): String = browser.get(url).toString
+    override def getHtml(url: String): String = retryGetHtml(url, retries)
+
+    private def retryGetHtml(url: String, retries: Int): String = {
+        Try(browser.get(url).toString).recover {
+            case _ if retries > 0 =>
+                Thread sleep timeToRetry
+                retryGetHtml(url, retries-1)
+            case e => throw e
+        }.get
+    }
 }
 
 object HtmlCleanerPageBrowser extends PageBrowser {
@@ -31,7 +45,6 @@ object HtmlCleanerPageBrowser extends PageBrowser {
 
         val divs = getPostsDivs(rootNode)
         val msgDivs = divs.flatMap(getMsgDivs)
-        val postIds = divs.map(node => node.getAttributeByName("id"))
         val userNames = divs.map(getUserNameFromPostDiv)
         val tuples = msgDivs zip userNames
 
