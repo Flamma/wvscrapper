@@ -10,7 +10,7 @@ import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 
-object WVScrap extends App {
+object Main extends App {
     val url = args.toList.headOption.fold("file:///home/pablo/practicas/wvscrap/in/offtopic.html")(identity)
     val scrapper = new HtmlCleanerPageScrapper(JSoupPageDownloader)
     val posts = scrapper.getPosts(url)
