@@ -1,5 +1,9 @@
 package net.asqueados.wvscrap
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
 import org.htmlcleaner.{HtmlCleaner, TagNode}
 
 trait PageBrowser {
@@ -11,6 +15,7 @@ trait PageBrowser {
 
 object HtmlCleanerPageBrowser extends PageBrowser {
     private val MsgIdPattern = "e_msg_[0-9]*".r
+    private val MiADateFormat = DateTimeFormatter.ofPattern("d/MMM/y, k:m").withLocale(new Locale("es"))
     private val NextTexts = List("Siguiente", "última")
     private val MessageClass = "contenido_msg"
     private val ThreadClass = "topicMsg"
@@ -27,10 +32,11 @@ object HtmlCleanerPageBrowser extends PageBrowser {
         val divs = getPostsDivs(rootNode)
         val msgDivs = divs.flatMap(getMsgDivs)
         val userNames = divs.map(getUserNameFromPostDiv)
-        val tuples = msgDivs zip userNames
+        val times = divs.map(getTimeFromPostDiv)
+        val tuples = msgDivs zip userNames zip times
 
         tuples.map {
-            case (div: TagNode, userName: String) => Post(userName, div.innerHtml)
+            case ((div: TagNode, userName: String), time: LocalDateTime) => Post(userName, time, div.innerHtml)
         }
 
     }
@@ -63,10 +69,17 @@ object HtmlCleanerPageBrowser extends PageBrowser {
         postRow.findElementByName("a", true).getText.toString
     }
 
+    private def getTimeFromPostDiv(postDiv: TagNode): LocalDateTime = {
+        getDateTime(postDiv.findElementByName("time", true).getText.toString)
+    }
+
+    private def getDateTime(stringTime: String): LocalDateTime = LocalDateTime.parse(stringTime.toLowerCase, MiADateFormat)
     private def getMsgDivs(node: TagNode): List[TagNode] = node.findAllByAtt("id", MsgIdPattern)
 
     private def getThreadDivs(node: TagNode): List[TagNode] = {
         val topicsNode = node.findElementByAttValue("id", TopicIndexId, true, true)
         topicsNode.findAllByAtt("class", ThreadClass)
     }
+
+
 }

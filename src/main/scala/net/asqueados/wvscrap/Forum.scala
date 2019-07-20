@@ -1,5 +1,7 @@
 package net.asqueados.wvscrap
 
+import java.time.LocalDateTime
+
 import io.circe.Encoder
 import io.circe.generic.semiauto._
 
@@ -8,9 +10,10 @@ import io.circe.generic.semiauto._
  * Forum post
  *
  * @param username: the user who created the post
+ * @param time: when the post was written
  * @param content: what was posted
  */
-case class Post(username: String, content: String)
+case class Post(username: String, time: LocalDateTime, content: String)
 
 object Post {
     implicit val encoder: Encoder[Post] = deriveEncoder[Post]
