@@ -7,6 +7,7 @@ import scala.util.Try
 
 trait PageBrowser {
     def getPosts(url: String): List[Post]
+    def getThreads(url: String): List[Link]
     def getNextPageUrl(html: String): Option[String]
 }
 
@@ -26,7 +27,7 @@ object JSoupPageDownloader extends PageDownloader {
     private def retryGetHtml(url: String, retries: Int): String = {
         Try(browser.get(url).toString).recover {
             case _ if retries > 0 =>
-                Thread sleep timeToRetry
+                java.lang.Thread sleep timeToRetry
                 retryGetHtml(url, retries-1)
             case e => throw e
         }.get
@@ -35,8 +36,12 @@ object JSoupPageDownloader extends PageDownloader {
 
 object HtmlCleanerPageBrowser extends PageBrowser {
     private val MsgIdPattern = "e_msg_[0-9]*".r
-    private val cleaner = new HtmlCleaner
     private val NextTexts = List("Siguiente", "última")
+    private val MessageClass = "contenido_msg"
+    private val ThreadClass = "topicMsg"
+    private val TopicIndexId = "ForoIndiceTemas"
+
+    private val cleaner = new HtmlCleaner
 
     import TagNodeExtend.tagNodeWrapper
 
@@ -54,21 +59,34 @@ object HtmlCleanerPageBrowser extends PageBrowser {
 
     }
 
+    override def getThreads(html: String): List[Link] = {
+        val rootNode = cleaner.clean(html)
+
+        val divs = getThreadDivs(rootNode)
+        val links = divs.map(_.getAllElements(false)(0))
+
+        links.map { link => Link(link.getText.toString, link.getAttributeByName("href")) }
+    }
+
     override def getNextPageUrl(html: String): Option[String] = {
         val rootNode = cleaner.clean(html)
-        val tableNode = rootNode.findElementByAttValue("id", "ForoMensajes", true, true)
-        val nextNode = tableNode.getElementsByName("a", true).find(n => NextTexts.contains(n.getText.toString))
+        val nextNode = rootNode.getElementsByName("a", true).find(n => NextTexts.contains(n.getText.toString))
         nextNode.map(_.getAttributeByName("href"))
     }
 
-    private def getPostsDivs(node: TagNode) = node.findAllByAtt("class", "contenido_msg")
+    private def getPostsDivs(node: TagNode): List[TagNode] = node.findAllByAtt("class", MessageClass)
 
     private def getUserNameFromPostDiv(postDiv: TagNode): String = {
         val postRow = postDiv.getParent.getParent
         postRow.findElementByName("a", true).getText.toString
     }
 
-    private def getMsgDivs(node: TagNode) = node.findAllByAtt("id", MsgIdPattern)
+    private def getMsgDivs(node: TagNode): List[TagNode] = node.findAllByAtt("id", MsgIdPattern)
+
+    private def getThreadDivs(node: TagNode): List[TagNode] = {
+        val topicsNode = node.findElementByAttValue("id", TopicIndexId, true, true)
+        topicsNode.findAllByAtt("class", ThreadClass)
+    }
 }
 
 class WVScrapper(downloader: PageDownloader, browser: PageBrowser) {
@@ -78,10 +96,17 @@ class WVScrapper(downloader: PageDownloader, browser: PageBrowser) {
       * Get all posts from one thread
       *
       * @param url url to one page of the thread
+      * @return list of posts
       */
-    def getPosts(url: String): List[Post] = {
-        getRemainingPages(cleanUrl(url))
-    }
+    def getPosts(url: String): List[Post] = getRemainingPages(cleanUrl(url))
+
+
+    /**
+      * Get all trheads from one subforum
+      * @param url url to one page of the subforum
+      * @return list of threads
+      */
+    def getThreads(url: String): List[Thread] = getRemainingThreads(cleanUrl(url))
 
     private def getRemainingPages(url: String): List[Post] = {
         val html = downloader.getHtml(url)
@@ -89,6 +114,18 @@ class WVScrapper(downloader: PageDownloader, browser: PageBrowser) {
             browser.getNextPageUrl(html).fold(List.empty[Post])(nextUrl => getRemainingPages(addBaseUrl(nextUrl)))
     }
 
+    private def getRemainingThreads(url: String): List[Thread] = {
+        val html = downloader.getHtml(url)
+
+        browser.getThreads(html).map(getThread) ++
+            browser.getNextPageUrl(html).fold(List.empty[Thread])(nextUrl => getRemainingThreads(addBaseUrl(nextUrl)))
+    }
+
+    private def getThread(link: Link): Thread = Thread(link.title, getPosts(link.url))
+
+
     private def cleanUrl(url: String): String = addBaseUrl(url).split("\\?")(0)
     private def addBaseUrl(url:String): String = (if(!url.startsWith(baseUrl)) baseUrl else "") + url
 }
+
+case class Link(title: String, url: String)
