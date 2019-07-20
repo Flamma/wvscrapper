@@ -15,5 +15,3 @@ case class Post(username: String, content: String)
 object Post {
     implicit val encoder: Encoder[Post] = deriveEncoder[Post]
 }
-
-case class User(id: String, name: String)
