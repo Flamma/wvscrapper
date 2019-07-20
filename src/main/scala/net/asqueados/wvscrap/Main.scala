@@ -7,10 +7,10 @@ object Main extends App {
 
     args.toList match {
         case "thread" :: url :: _ =>
-            val posts = scrapper.getPosts(url)
-            println(posts.asJson)
+            val thread = scrapper.getThread(url)
+            println(thread.asJson)
         case "subforum" :: url :: _ =>
-            val threads = scrapper.getThreads(url)
+            val threads = scrapper.getSubforum(url)
             println(threads.asJson)
 
         case _ =>

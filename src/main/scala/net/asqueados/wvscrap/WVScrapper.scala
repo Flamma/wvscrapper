@@ -6,9 +6,10 @@ import org.htmlcleaner.{HtmlCleaner, TagNode}
 import scala.util.Try
 
 trait PageBrowser {
-    def getPosts(url: String): List[Post]
-    def getThreads(url: String): List[Link]
+    def getPosts(html: String): List[Post]
+    def getThreads(html: String): List[Link]
     def getNextPageUrl(html: String): Option[String]
+    def getTitle(html: String): String
 }
 
 trait PageDownloader {
@@ -40,6 +41,7 @@ object HtmlCleanerPageBrowser extends PageBrowser {
     private val MessageClass = "contenido_msg"
     private val ThreadClass = "topicMsg"
     private val TopicIndexId = "ForoIndiceTemas"
+    private val TitleClass = "texto_big"
 
     private val cleaner = new HtmlCleaner
 
@@ -74,6 +76,12 @@ object HtmlCleanerPageBrowser extends PageBrowser {
         nextNode.map(_.getAttributeByName("href"))
     }
 
+    override def getTitle(html: String): String = {
+        val rootNode = cleaner.clean(html)
+        val titleDiv = rootNode.findElementByAttValue("class", TitleClass, true, true)
+        titleDiv.getElementsByName("a", true)(0).getText.toString
+    }
+
     private def getPostsDivs(node: TagNode): List[TagNode] = node.findAllByAtt("class", MessageClass)
 
     private def getUserNameFromPostDiv(postDiv: TagNode): String = {
@@ -93,20 +101,28 @@ class WVScrapper(downloader: PageDownloader, browser: PageBrowser) {
     private val baseUrl = "https://webvampiro.mforos.com"
 
     /**
-      * Get all posts from one thread
+      * Get a thread
       *
       * @param url url to one page of the thread
-      * @return list of posts
+      * @return thread
       */
-    def getPosts(url: String): List[Post] = getRemainingPages(cleanUrl(url))
+    def getThread(url: String): Thread = {
+        val title = getTitle(cleanUrl(url))
+        val posts = getRemainingPages(cleanUrl(url))
+        Thread(title, posts)
+    }
 
 
     /**
-      * Get all trheads from one subforum
+      * Get a subforum
       * @param url url to one page of the subforum
-      * @return list of threads
+      * @return subforum
       */
-    def getThreads(url: String): List[Thread] = getRemainingThreads(cleanUrl(url))
+    def getSubforum(url: String): Subforum = {
+        val title = getTitle(cleanUrl(url))
+        val threads = getRemainingThreads(cleanUrl(url))
+        Subforum(title, threads)
+    }
 
     private def getRemainingPages(url: String): List[Post] = {
         val html = downloader.getHtml(url)
@@ -121,11 +137,11 @@ class WVScrapper(downloader: PageDownloader, browser: PageBrowser) {
             browser.getNextPageUrl(html).fold(List.empty[Thread])(nextUrl => getRemainingThreads(addBaseUrl(nextUrl)))
     }
 
-    private def getThread(link: Link): Thread = Thread(link.title, getPosts(link.url))
-
+    private def getThread(link: Link): Thread = getThread(link.url)
 
     private def cleanUrl(url: String): String = addBaseUrl(url).split("\\?")(0)
     private def addBaseUrl(url:String): String = (if(!url.startsWith(baseUrl)) baseUrl else "") + url
+    private def getTitle(url: String): String = browser.getTitle(downloader.getHtml(url))
 }
 
 case class Link(title: String, url: String)
