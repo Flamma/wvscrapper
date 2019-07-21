@@ -6,6 +6,9 @@ import io.circe.Encoder
 import io.circe.generic.semiauto._
 
 
+trait Exportable {
+    def title: String
+}
 /**
  * Forum post
  *
@@ -25,7 +28,7 @@ object Post {
   * @param title title of the thread
   * @param posts all posts of the thread
   */
-case class Thread(title: String, posts: List[Post])
+case class Thread(title: String, posts: List[Post]) extends Exportable
 
 object Thread {
     implicit val encoder: Encoder[Thread] = deriveEncoder[Thread]
@@ -37,7 +40,7 @@ object Thread {
   * @param title title of the subforum
   * @param threads all threads of the subforum
   */
-case class Subforum(title: String, threads: List[Thread])
+case class Subforum(title: String, threads: List[Thread]) extends Exportable
 
 object Subforum {
     implicit val encoder: Encoder[Subforum] = deriveEncoder[Subforum]
