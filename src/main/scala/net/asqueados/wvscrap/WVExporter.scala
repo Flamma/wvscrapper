@@ -7,7 +7,6 @@ import java.time.format.DateTimeFormatter
 
 import io.circe.Encoder
 
-
 object WVExporter {
     private val BasePath = "out/"
     private val DateFormat = DateTimeFormatter.ofPattern("yyMMddhhmmss")
@@ -16,7 +15,7 @@ object WVExporter {
         writeToFile(entity.title, entity.asJson.toString)
 
 
-    private def writeToFile(suffix: String, content: String) = {
+    private def writeToFile(suffix: String, content: String): Unit = {
 
         val file = new File(path(suffix))
         val bw = new BufferedWriter(new FileWriter(file))
@@ -28,9 +27,7 @@ object WVExporter {
         BasePath + LocalDateTime.now.format(DateFormat) + "_" + sanitize(suffix) + ".json"
 
     private def sanitize(filename: String) =
-        filename.replaceAll("""[*\[\]()/!"'\?]""", "")
+        filename.replaceAll("""[\*\[\]()/!"'\?]""", "")
             .trim
             .replace(" ", "-")
-
-
 }
