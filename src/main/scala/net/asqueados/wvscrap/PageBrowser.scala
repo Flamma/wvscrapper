@@ -66,7 +66,7 @@ object HtmlCleanerPageBrowser extends PageBrowser {
 
     private def getUserNameFromPostDiv(postDiv: TagNode): String = {
         val postRow = postDiv.getParent.getParent
-        postRow.findElementByName("a", true).getText.toString
+        postRow.findElementByAttValue("itemprop", "name", true, true).getText.toString
     }
 
     private def getTimeFromPostDiv(postDiv: TagNode): LocalDateTime = {
