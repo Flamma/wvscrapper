@@ -16,6 +16,9 @@ trait PageBrowser {
 object HtmlCleanerPageBrowser extends PageBrowser {
     private val MsgIdPattern = "e_msg_[0-9]*".r
     private val MiADateFormat = DateTimeFormatter.ofPattern("d/MMM/y, k:m").withLocale(new Locale("es"))
+    private val MiAOnlyDateFormat = DateTimeFormatter.ofPattern("d/MMM/y").withLocale(new Locale("es"))
+    private val Today = "hoy"
+    private val Yesterday ="ayer"
     private val NextTexts = List("Siguiente", "última")
     private val MessageClass = "contenido_msg"
     private val ThreadClass = "topicMsg"
@@ -74,7 +77,11 @@ object HtmlCleanerPageBrowser extends PageBrowser {
         getDateTime(postDiv.getTableRow.findElementByName("time", true).getText.toString)
     }
 
-    private def getDateTime(stringTime: String): LocalDateTime = LocalDateTime.parse(stringTime.toLowerCase, MiADateFormat)
+    private def getDateTime(stringTime: String): LocalDateTime =
+        LocalDateTime.parse(stringTime.toLowerCase
+            .replaceAllLiterally(Today, LocalDateTime.now.format(MiAOnlyDateFormat))
+            .replaceAllLiterally(Yesterday, LocalDateTime.now.minusDays(1L).format(MiAOnlyDateFormat)),
+            MiADateFormat)
     private def getMsgDivs(node: TagNode): List[TagNode] = node.findAllByAtt("id", MsgIdPattern)
 
     private def getThreadDivs(node: TagNode): List[TagNode] = {
