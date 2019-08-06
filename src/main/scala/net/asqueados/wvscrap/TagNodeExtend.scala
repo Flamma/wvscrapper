@@ -12,6 +12,7 @@ class TagNodeExtend(self: TagNode) {
     def innerHtml: String = privInnerHtml(self, false)
     def findAllByAtt(name:String, pattern: Regex): List[TagNode] = privFindAllByAtt(self, name, pattern)
     def findAllByAtt(name:String, value: String): List[TagNode] = privFindAllByAtt(self, name, value.r)
+    def getTableRow: TagNode = privGetRow(self)
 
     private def privInnerHtml(node: TagNode, printOuter: Boolean = true): String = {
 
@@ -44,6 +45,14 @@ class TagNodeExtend(self: TagNode) {
             case child: TagNode => privFindAllByAtt(child, name, pattern)
             case _ => List.empty[TagNode]
         }
+    }
+
+    private def privGetRow(node: TagNode): TagNode = {
+        if(node == null)
+            null
+        else if(node.getName() == "tr")
+            node
+        else privGetRow(node.getParent)
     }
 }
 

@@ -62,15 +62,16 @@ object HtmlCleanerPageBrowser extends PageBrowser {
         titleDiv.getElementsByName("a", true)(0).getText.toString
     }
 
-    private def getPostsDivs(node: TagNode): List[TagNode] = node.findAllByAtt("class", MessageClass)
+    private def getPostsDivs(node: TagNode): List[TagNode] =  node.findAllByAtt("id", MsgIdPattern)
 
     private def getUserNameFromPostDiv(postDiv: TagNode): String = {
-        val postRow = postDiv.getParent.getParent
+
+        val postRow = postDiv.getTableRow
         postRow.findElementByAttValue("itemprop", "name", true, true).getText.toString
     }
 
     private def getTimeFromPostDiv(postDiv: TagNode): LocalDateTime = {
-        getDateTime(postDiv.findElementByName("time", true).getText.toString)
+        getDateTime(postDiv.getTableRow.findElementByName("time", true).getText.toString)
     }
 
     private def getDateTime(stringTime: String): LocalDateTime = LocalDateTime.parse(stringTime.toLowerCase, MiADateFormat)
